@@ -1,0 +1,32 @@
+[package]
+name = "deco-manager"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_urlencoded = "0.7"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tokio = { version = "1", features = ["sync", "time", "macros"] }
+rsa = "0.9"
+aes = "0.8"
+cbc = { version = "0.1", features = ["alloc"] }
+md-5 = "0.10"
+hex = "0.4"
+base64 = "0.22"
+rand = "0.8"
+keyring = { version = "3", features = ["windows-native"] }
+anyhow = "1"
+futures = "0.3"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt"] }
+
+# Crypto (RSA bigint maths) is ~50x slower unoptimised; optimise deps even in dev.
+[profile.dev.package."*"]
+opt-level = 3

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Deco Manager</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <section id="login" class="hidden">
+    <form id="login-form" class="card login-card">
+      <h1>Deco Manager</h1>
+      <p class="muted">Sign in with your Deco owner password. It is stored only in Windows Credential Manager on this PC.</p>
+      <label>Main Deco IP <input id="host" value="192.168.0.1" required /></label>
+      <label>Password <input id="password" type="password" required autofocus /></label>
+      <label class="row"><input id="remember" type="checkbox" checked /> Remember on this PC</label>
+      <button type="submit">Connect</button>
+      <p id="login-error" class="error"></p>
+    </form>
+  </section>
+
+  <div id="app" class="hidden">
+    <nav>
+      <div class="brand"><span class="dot"></span> Deco Manager</div>
+      <a data-view="dashboard" class="active">Dashboard</a>
+      <a data-view="mesh">Mesh <span id="nav-mesh" class="count"></span></a>
+      <a data-view="devices">Devices <span id="nav-devices" class="count"></span></a>
+      <a data-view="activity">Activity <span id="activity-badge" class="badge hidden"></span></a>
+      <a data-view="explorer">API explorer</a>
+      <div class="spacer"></div>
+      <div class="status">
+        <div id="conn" class="small"></div>
+        <div id="updated" class="muted small"></div>
+        <button id="refresh" class="ghost sm">Refresh now</button>
+      </div>
+      <a id="logout" class="small">Sign out &amp; forget</a>
+    </nav>
+
+    <main>
+      <div id="error-bar" class="error-bar hidden"></div>
+
+      <section id="view-dashboard" class="view">
+        <header><h2>Dashboard</h2></header>
+        <div class="scroll">
+          <div id="stats" class="grid stats"></div>
+          <div class="two-col">
+            <div>
+              <h3>Wi-Fi networks</h3>
+              <div id="wifi" class="list-card card"></div>
+            </div>
+            <div>
+              <h3>Busiest devices right now</h3>
+              <div id="top" class="list-card card"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-mesh" class="view hidden">
+        <header><h2>Mesh</h2><button class="danger" id="reboot-all">Reboot whole mesh</button></header>
+        <div class="scroll">
+          <div id="topo" class="card topo"></div>
+          <div id="models" class="chips"></div>
+          <div id="nodes" class="grid nodes"></div>
+        </div>
+      </section>
+
+      <section id="view-devices" class="view hidden">
+        <header><h2>Devices</h2><span id="device-count" class="muted small"></span></header>
+        <div class="toolbar">
+          <input id="search" placeholder="Search name, label, IP, MAC, type…" />
+          <div id="filters" class="seg">
+            <button data-f="online" class="on">Online</button>
+            <button data-f="all">All</button>
+            <button data-f="unlabelled">Unlabelled</button>
+            <button data-f="wired">Wired</button>
+            <button data-f="wireless">Wi-Fi</button>
+          </div>
+          <select id="node-filter"><option value="">All Decos</option></select>
+        </div>
+        <div class="table-wrap scroll">
+          <table id="devices">
+            <colgroup><col class="c-dev"><col class="c-addr"><col class="c-type"><col class="c-conn"><col class="c-traffic"><col class="c-act"></colgroup>
+            <thead><tr>
+              <th data-sort="name">Device</th><th data-sort="ip">Address</th><th data-sort="kind">Type</th>
+              <th data-sort="node">Connection</th><th data-sort="speed">Traffic</th><th></th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="view-activity" class="view hidden">
+        <header><h2>Activity</h2><span class="muted small">Devices joining and leaving, checked every 30 s while the app is open</span></header>
+        <div class="card list-card scroll"><ul id="activity-log" class="log"></ul></div>
+      </section>
+
+      <section id="view-explorer" class="view hidden">
+        <header><h2>API explorer</h2></header>
+        <p class="muted">Call any local Deco endpoint. <code>read</code> is safe; anything else may change router settings.</p>
+        <div class="toolbar">
+          <input id="raw-path" value="admin/network?form=wan_ipv4" list="raw-presets" />
+          <datalist id="raw-presets">
+            <option value="admin/network?form=wan_ipv4"></option>
+            <option value="admin/network?form=performance"></option>
+            <option value="admin/network?form=internet"></option>
+            <option value="admin/network?form=lan_ip"></option>
+            <option value="admin/device?form=device_list"></option>
+            <option value="admin/client?form=client_list"></option>
+            <option value="admin/wireless?form=wlan"></option>
+          </datalist>
+          <button id="raw-send">Send</button>
+        </div>
+        <textarea id="raw-payload" rows="3">{"operation":"read"}</textarea>
+        <pre id="raw-out" class="scroll"></pre>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js"></script>
+</body>
+</html>
