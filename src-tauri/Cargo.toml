@@ -2,6 +2,8 @@
 name = "deco-manager"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "Desktop app for managing a TP-Link Deco mesh over its local API"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

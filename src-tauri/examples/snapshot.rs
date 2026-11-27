@@ -1,12 +1,14 @@
-// Dumps a full UI snapshot as JSON (used to preview the UI in a browser).
+// Dumps a full UI snapshot as JSON (handy for previewing the UI in a browser).
+//   DECO_HOST=... DECO_PASSWORD=... cargo run --example snapshot > snap.json
 #[path = "../src/deco.rs"] mod deco;
 #[path = "../src/model.rs"] #[allow(dead_code)] mod model;
 use serde_json::json;
 use std::collections::HashMap;
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    let pw = keyring::Entry::new("deco-manager", "admin").unwrap().get_password().unwrap();
-    let mut d = deco::Deco::new("192.168.0.1", &pw);
+    let host = std::env::var("DECO_HOST").unwrap_or_else(|_| "192.168.0.1".into());
+    let pw = std::env::var("DECO_PASSWORD").unwrap_or_else(|_| keyring::Entry::new("deco-manager", "admin").unwrap().get_password().unwrap());
+    let mut d = deco::Deco::new(&host, &pw);
     d.login().await.unwrap();
     let r = || json!({"operation":"read"});
     let wan = d.request("admin/network?form=wan_ipv4", r()).await.unwrap();
@@ -22,9 +24,10 @@ async fn main() {
             for c in l { map.insert(model::norm_mac(c["mac"].as_str().unwrap_or("")), n.name.clone()); }
         }
     }
-    let labels: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(std::env::var("APPDATA").unwrap() + "/com.local.decomanager/labels.json").unwrap()).unwrap();
+    let labels: serde_json::Value = std::fs::read_to_string(std::env::var("APPDATA").unwrap_or_default() + "/com.local.decomanager/labels.json")
+        .ok().and_then(|s| serde_json::from_str(&s).ok()).unwrap_or(json!({}));
     let (cpu, mem) = model::perf(&perf);
-    let s = model::Snapshot { host: "192.168.0.1".into(), updated: 1, refreshing: false, error: None,
+    let s = model::Snapshot { host: host.clone(), updated: 1, refreshing: false, error: None,
         internet: model::internet(&wan, &nodes), cpu, mem, wifi: model::wifi(&wlan), clients: model::clients(&all["client_list"], &map, &labels), nodes };
     println!("{}", serde_json::to_string(&s).unwrap());
 }

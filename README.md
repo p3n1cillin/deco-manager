@@ -1,23 +1,80 @@
 # Deco Manager
 
-Desktop app (Tauri 2 + Rust) for managing a TP-Link Deco mesh over its **local** API (no TP-Link cloud).
+A fast Windows desktop app for managing a **TP-Link Deco** mesh network. It talks to your main Deco directly over your home network using the same local API as the Deco web page. There's no TP-Link cloud account and no phone app in the loop.
 
-## Run
-- Dev: `.\dev.ps1` (or `npx tauri dev` with cargo on PATH)
-- Installer: `npx tauri build` → `src-tauri/target/release/bundle/nsis/`
+Built with [Tauri 2](https://tauri.app) (Rust backend, plain HTML/JS front end).
 
-## Layout
-- `src-tauri/src/deco.rs`: Deco protocol (RSA login, AES-128-CBC session, signed requests, auto re-login)
-- `src-tauri/src/main.rs`: Tauri commands: `connect`, `auto_connect`, `forget`, `dashboard`, `clients`, `set_label`, `set_wifi`, `reboot`, `raw`
-- `ui/`: plain HTML/CSS/JS front end (no bundler)
-- `src-tauri/examples/probe.rs`: headless login test (`cargo run --example probe`)
-- `reference-deco.py`: original Python CLI prototype
+## Features
 
-## Storage
-- Password: Windows Credential Manager (`deco-manager`)
-- Host + device labels: `%APPDATA%\com.local.decomanager\`
+- **Dashboard**: internet status, public IP, DNS, connection type, router CPU and memory, total live traffic, busiest devices.
+- **Wi-Fi control**: turn the main and guest networks on or off per band.
+- **Mesh view**: a topology diagram showing which units are wired or wireless (with signal quality), plus per-unit status, model, firmware and device count. You can reboot a single unit or the whole mesh.
+- **Devices**: every connected device with IP, MAC, type, band and which Deco it's on. Search, filter (online, unlabelled, wired, Wi-Fi, per Deco) and sort. Give devices your own names; they're stored locally and keyed by MAC address.
+- **Activity**: a live log of devices joining and leaving, with a pop-up when an unlabelled device appears.
+- **API explorer**: send any request to the Deco's local API, which is handy for discovering more settings.
 
-## Notes
-- Deco allows one admin session; opening the web UI/app logs this out, and the client re-logs in automatically.
-- `client_list` with `device_mac: "default"` returns all clients; per-node lists (`device_mac: <node mac>`) tell you which Deco each device is on.
-- Parental controls, QoS and blocking are cloud/app-only on most firmware; use the API explorer tab to probe for endpoints.
+The app refreshes in the background every 30 seconds, so switching pages is instant.
+
+## Compatibility
+
+Tested on a mixed **Deco S4 (v4, firmware 1.1.2)** + **Deco M4R (v2, firmware 1.8.2)** mesh. Most Deco models use the same local API, so others (X20, X50, X55, M5, XE75…) should work too. If yours doesn't, please open an issue with your model and firmware version.
+
+Parental controls, QoS, HomeShield and device blocking are handled by TP-Link's cloud on most firmware, so they aren't available through the local API.
+
+## Getting started
+
+### Requirements
+
+- Windows 10/11 (WebView2 is built in)
+- [Rust](https://rustup.rs) (stable, MSVC toolchain) and the Visual Studio C++ Build Tools
+- [Node.js](https://nodejs.org) 18+ (only used for the Tauri CLI)
+
+### Run it
+
+```powershell
+git clone https://github.com/p3n1cillin/deco-manager.git
+cd deco-manager
+npm install
+npx tauri dev
+```
+
+Sign in with your **main Deco's IP address** (often `192.168.0.1` or `192.168.68.1`; it's your PC's default gateway) and the **Deco owner password**, the one you use in the Deco app.
+
+### Build an installer
+
+```powershell
+npx tauri build
+```
+
+The installer is written to `src-tauri/target/release/bundle/nsis/`.
+
+## Privacy and security
+
+- Your password is stored only in **Windows Credential Manager** (entry `deco-manager`) if you tick "Remember". Use *Sign out & forget* to remove it.
+- Device names you set are stored in `%APPDATA%\com.local.decomanager\labels.json`.
+- Nothing is sent anywhere except your own Deco. Wi-Fi passwords are never passed to the UI.
+
+## Things to know
+
+- A Deco allows **one admin session at a time**. Opening the Deco web page or app logs Deco Manager out, and it logs straight back in on its next refresh.
+- Some endpoints are slow on older Decos (the device and client lists can take around 3 seconds each). The background refresh hides this.
+
+## Project layout
+
+| Path | What it is |
+|---|---|
+| `src-tauri/src/deco.rs` | Deco protocol: RSA login, AES-128-CBC session, signed requests, automatic re-login |
+| `src-tauri/src/model.rs` | Turns raw Deco JSON into clean typed data (decodes names, drops secrets) |
+| `src-tauri/src/main.rs` | Background poller, change detection and Tauri commands |
+| `ui/` | Front end (no bundler) |
+| `src-tauri/examples/probe.rs` | Headless login test: `DECO_HOST=… DECO_PASSWORD=… cargo run --example probe` |
+| `src-tauri/examples/snapshot.rs` | Dumps the data the UI sees as JSON |
+| `reference-deco.py` | Original Python CLI prototype (uses [`tplinkrouterc6u`](https://github.com/AlexandrErohin/TP-Link-Archer-C6U)) |
+
+## Credits
+
+The Deco login and encryption scheme was worked out by the [`tplinkrouterc6u`](https://github.com/AlexandrErohin/TP-Link-Archer-C6U) project. This app reimplements it in Rust.
+
+## Licence
+
+[MIT](LICENSE). Not affiliated with or endorsed by TP-Link. "Deco" is a trademark of TP-Link.
