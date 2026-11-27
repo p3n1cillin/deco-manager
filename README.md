@@ -21,7 +21,13 @@ Tested on a mixed **Deco S4 (v4, firmware 1.1.2)** + **Deco M4R (v2, firmware 1.
 
 Parental controls, QoS, HomeShield and device blocking are handled by TP-Link's cloud on most firmware, so they aren't available through the local API.
 
-## Getting started
+## Download
+
+Get the latest Windows installer (`DecoManager_x.y.z_x64-setup.exe`) from the [Releases page](https://github.com/p3n1cillin/deco-manager/releases/latest). It installs for your user account only (no admin needed) and adds Deco Manager to the Start menu.
+
+The installer isn't code-signed, so Windows SmartScreen may say "Windows protected your PC". Click **More info → Run anyway**, or build it yourself from source (below).
+
+## Building from source
 
 ### Requirements
 
