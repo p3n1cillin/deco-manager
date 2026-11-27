@@ -1,6 +1,6 @@
 [package]
 name = "deco-manager"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 description = "Desktop app for managing a TP-Link Deco mesh over its local API"
@@ -34,3 +34,6 @@ tokio = { version = "1", features = ["macros", "rt"] }
 # Crypto (RSA bigint maths) is ~50x slower unoptimised; optimise deps even in dev.
 [profile.dev.package."*"]
 opt-level = 3
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_LibraryLoader"] }

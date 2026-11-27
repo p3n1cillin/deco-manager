@@ -296,12 +296,35 @@ async fn raw(st: State<'_, St>, path: String, payload: Value) -> R<Value> {
     with_deco(&st, async |d| d.request(&path, payload).await).await
 }
 
+/// Tauri only sets the window's small icon, so the taskbar (which uses the large one) shows
+/// Windows' generic app icon. Hand the window both sizes of the icon embedded in the .exe.
+#[cfg(windows)]
+fn set_taskbar_icon(window: &tauri::WebviewWindow) {
+    use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        GetSystemMetrics, LoadImageW, SendMessageW, ICON_BIG, ICON_SMALL, IMAGE_ICON, LR_SHARED,
+        SM_CXICON, SM_CXSMICON, SM_CYICON, SM_CYSMICON, WM_SETICON,
+    };
+    const APP_ICON_ID: usize = 32512; // tauri-build embeds the app icon under this resource id
+    let Ok(hwnd) = window.hwnd() else { return };
+    unsafe {
+        let module = GetModuleHandleW(std::ptr::null());
+        let load = |cx, cy| LoadImageW(module, APP_ICON_ID as *const u16, IMAGE_ICON, GetSystemMetrics(cx), GetSystemMetrics(cy), LR_SHARED);
+        let (big, small) = (load(SM_CXICON, SM_CYICON), load(SM_CXSMICON, SM_CYSMICON));
+        let hwnd = hwnd.0 as _;
+        if !big.is_null() { SendMessageW(hwnd, WM_SETICON, ICON_BIG as usize, big as isize); }
+        if !small.is_null() { SendMessageW(hwnd, WM_SETICON, ICON_SMALL as usize, small as isize); }
+    }
+}
+
 fn main() {
     let st: St = Arc::new(Inner::default());
     tauri::Builder::default()
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(st.clone())
         .setup(move |app| {
+            #[cfg(windows)]
+            if let Some(w) = app.get_webview_window("main") { set_taskbar_icon(&w); }
             tauri::async_runtime::spawn(poller(app.handle().clone(), st.clone()));
             Ok(())
         })

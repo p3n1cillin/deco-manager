@@ -639,7 +639,7 @@ dependencies = [
 
 [[package]]
 name = "deco-manager"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "aes",
  "anyhow",
@@ -660,6 +660,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-window-state",
  "tokio",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
