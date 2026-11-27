@@ -49,6 +49,54 @@ fn labels(app: &AppHandle) -> Value {
     let p = data_file(app, "labels.json");
     load_json(p)
 }
+fn save_json(app: &AppHandle, name: &str, v: &Value) {
+    fs::write(data_file(app, name), serde_json::to_string_pretty(v).unwrap()).ok();
+}
+
+/// Set a client's name on the Deco itself, so the Deco phone app shows it too.
+/// The firmware needs the current client_type in the same write or it resets the type.
+async fn write_deco_name(d: &mut Deco, raw: &Value, name: &str) -> anyhow::Result<()> {
+    use base64::{engine::general_purpose::STANDARD as B64, Engine};
+    d.request("admin/client?form=client_list", json!({"operation": "write", "params": {"client_list": [{
+        "mac": raw["mac"], "name": B64.encode(name), "user_set_name_type": true, "client_type": raw["client_type"],
+    }]}})).await.map(|_| ())
+}
+
+/// Two-way name sync between Deco Manager's labels and the Deco (= the Deco phone app).
+/// `synced.json` remembers the Deco's name when the two last agreed, which tells us who changed:
+///  - Deco name moved away from that  -> renamed in the phone app, adopt it here
+///  - otherwise our label differs     -> renamed here (or never pushed), write it to the Deco
+async fn sync_names(app: &AppHandle, d: &mut Deco, mut raw: Value) -> Value {
+    use base64::{engine::general_purpose::STANDARD as B64, Engine};
+    let (mut lbl, mut synced) = (labels(app), load_json(data_file(app, "synced.json")));
+    let (mut lbl_dirty, mut sync_dirty) = (false, false);
+    let Some(list) = raw.as_array_mut() else { return raw };
+    for c in list.iter_mut() {
+        let mac = norm_mac(c["mac"].as_str().unwrap_or(""));
+        let Some(label) = lbl[&mac].as_str().map(String::from) else { continue };
+        let deco = model::decode_name(c["name"].as_str().unwrap_or(""));
+        let last = synced[&mac].as_str().map(String::from);
+        if deco == label {
+            if last.as_deref() != Some(&label) { synced[&mac] = json!(label); sync_dirty = true; }
+        } else if last.as_deref().is_some_and(|s| s != deco) {
+            eprintln!("[deco] {mac} renamed in the Deco app: {label:?} -> {deco:?}");
+            lbl[&mac] = json!(deco); synced[&mac] = json!(deco);
+            lbl_dirty = true; sync_dirty = true;
+        } else {
+            match write_deco_name(d, c, &label).await {
+                Ok(()) => {
+                    eprintln!("[deco] {mac} name sent to Deco: {deco:?} -> {label:?}");
+                    c["name"] = json!(B64.encode(&label));
+                    synced[&mac] = json!(label); sync_dirty = true;
+                }
+                Err(e) => eprintln!("[deco] couldn't rename {mac} on the Deco: {e}"),
+            }
+        }
+    }
+    if lbl_dirty { save_json(app, "labels.json", &lbl); }
+    if sync_dirty { save_json(app, "synced.json", &synced); }
+    raw
+}
 
 /// Run several signed reads in parallel on one session (router handles them concurrently).
 async fn read_all(d: &Deco, reqs: &[(&str, Value)]) -> Vec<anyhow::Result<Value>> {
@@ -108,6 +156,7 @@ async fn refresh(app: &AppHandle, st: &St) {
     if let Some(e) = &err { eprintln!("[deco] refresh error: {e}"); }
     let raw_nodes = ok(3)["device_list"].clone();
     let raw_clients = ok(4)["client_list"].clone();
+    let raw_clients = if r[4].is_ok() { sync_names(app, d, raw_clients).await } else { raw_clients };
     let lbl = labels(app);
 
     let mut nodes = model::nodes(&raw_nodes);
@@ -255,10 +304,22 @@ async fn set_label(app: AppHandle, st: State<'_, St>, mac: String, label: String
     {
         let mut s = st.snap.lock().await;
         if let Some(c) = s.clients.iter_mut().find(|c| c.mac == m) {
-            c.label = if label.is_empty() { None } else { Some(label) };
+            c.label = if label.is_empty() { None } else { Some(label.clone()) };
         }
     }
     emit_snap(&app, &st).await;
+
+    // Rename on the Deco straight away when it currently lists the device, so the phone app
+    // shows it too. Offline devices get pushed by the refresh sync once they reappear.
+    // (Clearing a label only forgets it here; the Deco keeps its name.)
+    let raw = st.raw_clients.lock().await.as_array().and_then(|a| a.iter().find(|c| norm_mac(c["mac"].as_str().unwrap_or("")) == m).cloned());
+    if let (Some(raw), false) = (raw, label.is_empty()) {
+        with_deco(&st, async |d| write_deco_name(d, &raw, &label).await).await
+            .map_err(|err| format!("Saved here, but the Deco didn't accept the new name ({err}). It will retry on the next refresh."))?;
+        let mut synced = load_json(data_file(&app, "synced.json"));
+        synced[&m] = json!(label);
+        save_json(&app, "synced.json", &synced);
+    }
     Ok(())
 }
 

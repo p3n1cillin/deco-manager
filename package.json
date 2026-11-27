@@ -2,7 +2,7 @@
   "name": "deco-manager",
   "private": true,
   "license": "MIT",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "scripts": { "tauri": "tauri", "dev": "tauri dev", "build": "tauri build" },
   "devDependencies": { "@tauri-apps/cli": "^2" }
 }

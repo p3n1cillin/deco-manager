@@ -9,7 +9,7 @@ Built with [Tauri 2](https://tauri.app) (Rust backend, plain HTML/JS front end).
 - **Dashboard**: internet status, public IP, DNS, connection type, router CPU and memory, total live traffic, busiest devices.
 - **Wi-Fi control**: turn the main and guest networks on or off per band.
 - **Mesh view**: a topology diagram showing which units are wired or wireless (with signal quality), plus per-unit status, model, firmware and device count. You can reboot a single unit or the whole mesh.
-- **Devices**: every connected device with IP, MAC, type, band and which Deco it's on. Search, filter (online, unlabelled, wired, Wi-Fi, per Deco) and sort. Give devices your own names; they're stored locally and keyed by MAC address.
+- **Devices**: every connected device with IP, MAC, type, band and which Deco it's on. Search, filter (online, unlabelled, wired, Wi-Fi, per Deco) and sort. Give devices your own names, and they **sync both ways with the Deco phone app**: a rename here is written to the Deco, and a rename in the phone app is picked up here on the next refresh.
 - **Activity**: a live log of devices joining and leaving, with a pop-up when an unlabelled device appears.
 - **API explorer**: send any request to the Deco's local API, which is handy for discovering more settings.
 
@@ -57,7 +57,7 @@ The installer is written to `src-tauri/target/release/bundle/nsis/`.
 ## Privacy and security
 
 - Your password is stored only in **Windows Credential Manager** (entry `deco-manager`) if you tick "Remember". Use *Sign out & forget* to remove it.
-- Device names you set are stored in `%APPDATA%\com.local.decomanager\labels.json`.
+- Device names are written to your Deco (so the phone app shows them) and also kept in `%APPDATA%\com.local.decomanager\labels.json`, so devices that are offline keep their names and get synced when they reconnect.
 - Nothing is sent anywhere except your own Deco. Wi-Fi passwords are never passed to the UI.
 
 ## Things to know

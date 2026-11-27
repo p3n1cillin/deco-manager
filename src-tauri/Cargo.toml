@@ -1,6 +1,6 @@
 [package]
 name = "deco-manager"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 description = "Desktop app for managing a TP-Link Deco mesh over its local API"
