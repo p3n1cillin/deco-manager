@@ -93,7 +93,7 @@ function render() {
   $("#nav-mesh").textContent = s.nodes.length || "";
   $("#nav-devices").textContent = s.clients.filter((c) => c.online).length || "";
   $("#error-bar").classList.toggle("hidden", !s.error);
-  $("#error-bar").textContent = s.error ? "Last refresh had a problem: " + s.error : "";
+  $("#error-bar").textContent = s.error || "";
   if (ui.view === "dashboard") renderDashboard();
   if (ui.view === "mesh") renderMesh();
   if (ui.view === "devices" && !ui.editing) renderDevices();

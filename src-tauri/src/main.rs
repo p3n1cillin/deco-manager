@@ -61,13 +61,32 @@ fn labels(app: &AppHandle) -> Value {
 async fn read_all(d: &Deco, reqs: &[(&str, Value)]) -> Vec<anyhow::Result<Value>> {
     futures::future::join_all(reqs.iter().map(|(p, v)| d.request_once(p, v))).await
 }
+fn is_session_err(r: &anyhow::Result<Value>) -> bool {
+    r.as_ref().is_err_and(|e| e.to_string().contains("session expired"))
+}
+/// Deco allows one admin session: the Deco app, its web page or another tool signing in
+/// evicts ours. Log back in and retry, backing off a little in case the other login is still active.
 async fn read_all_retry(d: &mut Deco, reqs: &[(&str, Value)]) -> Vec<anyhow::Result<Value>> {
-    let res = read_all(d, reqs).await;
-    if res.iter().any(|r| r.as_ref().is_err_and(|e| e.to_string().contains("session expired"))) {
-        // Another admin login (Deco app / web UI) evicted us: log in again and retry once.
-        if d.login().await.is_ok() { return read_all(d, reqs).await; }
+    let mut res = read_all(d, reqs).await;
+    for wait in [0u64, 2, 5] {
+        if !res.iter().any(is_session_err) { break; }
+        if wait > 0 { tokio::time::sleep(Duration::from_secs(wait)).await; }
+        match d.login().await {
+            Ok(()) => {
+                eprintln!("[deco] session was taken over by another login; signed back in");
+                res = read_all(d, reqs).await;
+            }
+            Err(e) => eprintln!("[deco] re-login failed: {e}"),
+        }
     }
     res
+}
+fn friendly(e: &str) -> String {
+    if e.contains("session expired") {
+        "Signed out by another Deco login (the Deco app or web page). Reconnecting on the next refresh…".into()
+    } else if e.contains("error sending request") || e.contains("cannot reach") || e.contains("timed out") {
+        "Can't reach your Deco. Check this PC is on the home network.".into()
+    } else { e.to_string() }
 }
 
 async fn emit_snap(app: &AppHandle, st: &St) {
@@ -93,6 +112,7 @@ async fn refresh(app: &AppHandle, st: &St) {
     ]).await;
     let ok = |i: usize| r[i].as_ref().ok().cloned().unwrap_or(Value::Null);
     let err = r.iter().filter_map(|x| x.as_ref().err()).next().map(|e| e.to_string());
+    if let Some(e) = &err { eprintln!("[deco] refresh error: {e}"); }
     let raw_nodes = ok(3)["device_list"].clone();
     let raw_clients = ok(4)["client_list"].clone();
     let lbl = labels(app);
@@ -102,9 +122,11 @@ async fn refresh(app: &AppHandle, st: &St) {
     {
         let mut s = st.snap.lock().await;
         old_online = s.clients.iter().filter(|c| c.online).map(|c| (c.mac.clone(), c.clone())).collect();
-        if r[3].is_ok() || r[4].is_ok() || s.nodes.is_empty() {
-            s.internet = model::internet(&ok(0), &nodes);
-            (s.cpu, s.mem) = model::perf(&ok(1));
+        // Only replace what actually came back; a failed read keeps the last good data on screen.
+        let any_ok = r.iter().any(|x| x.is_ok());
+        {
+            if r[0].is_ok() { s.internet = model::internet(&ok(0), if r[3].is_ok() { &nodes } else { &s.nodes }); }
+            if r[1].is_ok() { (s.cpu, s.mem) = model::perf(&ok(1)); }
             if r[2].is_ok() { s.wifi = model::wifi(&ok(2)); }
             if r[4].is_ok() {
                 s.clients = model::clients(&raw_clients, &*st.node_of.lock().await, &lbl);
@@ -116,8 +138,8 @@ async fn refresh(app: &AppHandle, st: &St) {
                 s.nodes = nodes.clone();
             }
         }
-        s.error = err.clone();
-        s.updated = now_ms();
+        s.error = err.as_deref().map(friendly);
+        if any_ok { s.updated = now_ms(); }
     }
     emit_snap(app, st).await;
 

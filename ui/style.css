@@ -175,3 +175,4 @@ td .name { cursor: text; }
 .node dl { grid-template-columns: 62px 1fr; gap: 5px 8px; margin: 12px 0; font-size: 12px; }
 .node .mono { font-size: 11px; }
 .topo { padding: 16px 18px 14px; }
+.error-bar { background: #e9b03a14; border-color: #e9b03a55; color: var(--warn); }
