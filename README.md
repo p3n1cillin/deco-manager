@@ -35,10 +35,10 @@ Parental controls, QoS, HomeShield and device blocking are handled by TP-Link's 
 git clone https://github.com/p3n1cillin/deco-manager.git
 cd deco-manager
 npm install
-npx tauri dev
+npx tauri dev      # or .\dev.ps1
 ```
 
-Sign in with your **main Deco's IP address** (often `192.168.0.1` or `192.168.68.1`; it's your PC's default gateway) and the **Deco owner password**, the one you use in the Deco app.
+Sign in with your **Deco owner password**, the one you use in the Deco app. The main Deco's address is filled in automatically from your PC's default gateway; change it if your Deco runs in access-point mode behind another router.
 
 ### Build an installer
 
@@ -67,7 +67,7 @@ The installer is written to `src-tauri/target/release/bundle/nsis/`.
 | `src-tauri/src/model.rs` | Turns raw Deco JSON into clean typed data (decodes names, drops secrets) |
 | `src-tauri/src/main.rs` | Background poller, change detection and Tauri commands |
 | `ui/` | Front end (no bundler) |
-| `src-tauri/examples/probe.rs` | Headless login test: `DECO_HOST=… DECO_PASSWORD=… cargo run --example probe` |
+| `src-tauri/examples/probe.rs` | Headless login test: `DECO_PASSWORD=… cargo run --example probe` (set `DECO_HOST` to override the detected address) |
 | `src-tauri/examples/snapshot.rs` | Dumps the data the UI sees as JSON |
 | `reference-deco.py` | Original Python CLI prototype (uses [`tplinkrouterc6u`](https://github.com/AlexandrErohin/TP-Link-Archer-C6U)) |
 

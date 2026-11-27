@@ -47,13 +47,6 @@ fn load_json(p: PathBuf) -> Value {
 }
 fn labels(app: &AppHandle) -> Value {
     let p = data_file(app, "labels.json");
-    if !p.exists() {
-        // One-time import of labels made with the Python CLI prototype.
-        if let Some(home) = std::env::var_os("USERPROFILE") {
-            let old = PathBuf::from(home).join(".deco").join("labels.json");
-            if old.exists() { fs::copy(old, &p).ok(); }
-        }
-    }
     load_json(p)
 }
 
@@ -238,6 +231,10 @@ async fn forget(app: AppHandle, st: State<'_, St>) -> R<()> {
     Ok(())
 }
 
+/// Best guess at the main Deco's address for the sign-in screen.
+#[tauri::command]
+fn detect_host() -> Option<String> { deco::default_gateway() }
+
 #[tauri::command]
 async fn snapshot(st: State<'_, St>) -> R<Snapshot> { Ok(st.snap.lock().await.clone()) }
 
@@ -302,13 +299,14 @@ async fn raw(st: State<'_, St>, path: String, payload: Value) -> R<Value> {
 fn main() {
     let st: St = Arc::new(Inner::default());
     tauri::Builder::default()
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(st.clone())
         .setup(move |app| {
             tauri::async_runtime::spawn(poller(app.handle().clone(), st.clone()));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            connect, auto_connect, forget, snapshot, refresh_now, activity, set_label, set_wifi, reboot, raw
+            connect, auto_connect, detect_host, forget, snapshot, refresh_now, activity, set_label, set_wifi, reboot, raw
         ])
         .run(tauri::generate_context!())
         .expect("error running app");

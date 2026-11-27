@@ -1,5 +1,5 @@
 //! Headless login + read test against your Deco.
-//!   DECO_HOST=192.168.68.1 DECO_PASSWORD=... cargo run --example probe
+//!   DECO_PASSWORD=... cargo run --example probe        (host = your default gateway, or set DECO_HOST)
 //! Without DECO_PASSWORD it uses the password saved by the app.
 #[path = "../src/deco.rs"] mod deco;
 #[path = "../src/model.rs"] #[allow(dead_code)] mod model;
@@ -7,7 +7,7 @@ use std::time::Instant;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    let host = std::env::var("DECO_HOST").unwrap_or_else(|_| "192.168.0.1".into());
+    let host = std::env::var("DECO_HOST").ok().or_else(deco::default_gateway).expect("set DECO_HOST");
     let pw = std::env::var("DECO_PASSWORD").unwrap_or_else(|_| {
         keyring::Entry::new("deco-manager", "admin").and_then(|k| k.get_password())
             .expect("set DECO_PASSWORD or sign in with the app first")

@@ -56,7 +56,7 @@ def _raw_clients(c) -> list[dict]:
 
 
 @app.command()
-def login(host: str = typer.Option("192.168.0.1", help="Main Deco IP")):
+def login(host: str = typer.Option(..., help="Main Deco IP (your default gateway)")):
     """Save Deco host + owner password (password goes to Windows Credential Manager)."""
     pw = typer.prompt("Deco owner password", hide_input=True)
     c = TPLinkDecoClient(f"http://{host}", pw)

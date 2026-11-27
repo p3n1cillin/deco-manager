@@ -6,7 +6,7 @@ use serde_json::json;
 use std::collections::HashMap;
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    let host = std::env::var("DECO_HOST").unwrap_or_else(|_| "192.168.0.1".into());
+    let host = std::env::var("DECO_HOST").ok().or_else(deco::default_gateway).expect("set DECO_HOST");
     let pw = std::env::var("DECO_PASSWORD").unwrap_or_else(|_| keyring::Entry::new("deco-manager", "admin").unwrap().get_password().unwrap());
     let mut d = deco::Deco::new(&host, &pw);
     d.login().await.unwrap();

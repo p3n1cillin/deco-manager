@@ -51,6 +51,9 @@ async function start() {
     if (host) return enterApp();
   } catch (e) { $("#login-error").textContent = "Saved login failed: " + e; }
   $("#login").classList.remove("hidden");
+  const gw = await invoke("detect_host").catch(() => null);
+  if (gw && !$("#host").value) { $("#host").value = gw; $("#host-hint").textContent = "Detected from your network (your router's address)."; }
+  $("#password").focus();
 }
 $("#login-form").addEventListener("submit", async (ev) => {
   ev.preventDefault();
@@ -103,7 +106,8 @@ function renderStatus() {
   $("#conn").innerHTML = `<span class="dot ${s.internet.online ? "ok" : s.updated ? "bad" : ""}"></span> ${esc(s.host)}`;
   const ago = s.updated ? Math.round((Date.now() - s.updated) / 1000) : null;
   $("#updated").innerHTML = s.refreshing ? `<span class="spin"></span>Refreshing…` : ago == null ? "Waiting for data…" : `Updated ${ago < 5 ? "just now" : ago + "s ago"}`;
-  $(".brand .dot").className = "dot " + (s.internet.online ? "ok" : s.updated ? "bad" : "");
+  $("#tb-dot").className = "dot " + (s.internet.online ? "ok" : s.updated ? "bad" : "");
+  $("#tb-sub").textContent = s.host ? `· ${s.host}${s.nodes.length ? ` · ${s.nodes.length} units · ${s.clients.filter((c) => c.online).length} devices online` : ""}` : "";
 }
 const loading = () => `<div class="empty"><span class="spin"></span>Loading from your Deco…</div>`;
 
@@ -304,5 +308,29 @@ $("#raw-send").addEventListener("click", async () => {
   try { $("#raw-out").textContent = JSON.stringify(await invoke("raw", { path: $("#raw-path").value.trim(), payload }), null, 2); }
   catch (e) { $("#raw-out").textContent = String(e); }
 });
+
+/* ---------- desktop window behaviour ---------- */
+const win = window.__TAURI__.window?.getCurrentWindow?.();
+if (win) {
+  $("#tb-min").addEventListener("click", () => win.minimize());
+  $("#tb-max").addEventListener("click", () => win.toggleMaximize());
+  $("#tb-close").addEventListener("click", () => win.close());
+  const maxIcon = async () => {
+    const m = await win.isMaximized();
+    $("#tb-max").title = m ? "Restore" : "Maximise";
+    $("#tb-max svg").innerHTML = m
+      ? '<rect x="0.5" y="2.5" width="7" height="7"/><path d="M2.5 2.5V0.5h7v7h-2"/>'
+      : '<rect x="0.5" y="0.5" width="9" height="9"/>';
+  };
+  win.onResized?.(maxIcon); maxIcon();
+}
+// No browser-style context menu, reload, print, find or zoom.
+document.addEventListener("contextmenu", (e) => { if (!e.target.closest("input, textarea, pre")) e.preventDefault(); });
+document.addEventListener("keydown", (e) => {
+  const k = e.key.toLowerCase();
+  if (e.key === "F5" || (e.ctrlKey && ["r", "p", "f", "g", "j", "u", "s", "+", "-", "=", "0"].includes(k))) e.preventDefault();
+});
+document.addEventListener("wheel", (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+document.addEventListener("dragstart", (e) => e.preventDefault());
 
 start();

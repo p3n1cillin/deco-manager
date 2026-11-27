@@ -179,3 +179,8 @@ impl Deco {
         self.request(path, json!({"operation": "read"})).await
     }
 }
+
+/// The PC's default gateway, which on a Deco network is the main Deco.
+pub fn default_gateway() -> Option<String> {
+    netdev::get_default_gateway().ok()?.ipv4.first().map(|ip| ip.to_string())
+}

@@ -6,11 +6,19 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <header id="titlebar" data-tauri-drag-region>
+    <div class="tb-title" data-tauri-drag-region><span class="dot" id="tb-dot"></span><b data-tauri-drag-region>Deco Manager</b><span id="tb-sub" class="muted" data-tauri-drag-region></span></div>
+    <div class="tb-btns">
+      <button id="tb-min" title="Minimise" tabindex="-1"><svg viewBox="0 0 10 10"><path d="M0 5h10"/></svg></button>
+      <button id="tb-max" title="Maximise" tabindex="-1"><svg viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9"/></svg></button>
+      <button id="tb-close" class="close" title="Close" tabindex="-1"><svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10"/></svg></button>
+    </div>
+  </header>
   <section id="login" class="hidden">
     <form id="login-form" class="card login-card">
       <h1>Deco Manager</h1>
       <p class="muted">Sign in with your Deco owner password. It is stored only in Windows Credential Manager on this PC.</p>
-      <label>Main Deco IP <input id="host" value="192.168.0.1" required /></label>
+      <label>Main Deco address <input id="host" placeholder="e.g. 192.168.68.1" required /><span class="small muted" id="host-hint"></span></label>
       <label>Password <input id="password" type="password" required autofocus /></label>
       <label class="row"><input id="remember" type="checkbox" checked /> Remember on this PC</label>
       <button type="submit">Connect</button>
@@ -20,7 +28,6 @@
 
   <div id="app" class="hidden">
     <nav>
-      <div class="brand"><span class="dot"></span> Deco Manager</div>
       <a data-view="dashboard" class="active">Dashboard</a>
       <a data-view="mesh">Mesh <span id="nav-mesh" class="count"></span></a>
       <a data-view="devices">Devices <span id="nav-devices" class="count"></span></a>
